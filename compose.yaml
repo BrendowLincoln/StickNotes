@@ -1,0 +1,27 @@
+﻿services:
+#  stickynotes:
+#    image: stickynotes
+#    build:
+#      context: .
+#      dockerfile: StickyNotes/Dockerfile
+    
+  postgres:
+    image: postgres:14
+    container_name: sticky-postgres14
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sticky_notes_db
+      POSTGRES_USER: sticknotes
+      POSTGRES_PASSWORD: sticknotes1234
+    ports:
+      - "5434:5432"
+    volumes:
+      - sticky_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d sticky_notes_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    
+volumes:
+  sticky_pgdata:

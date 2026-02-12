@@ -1,0 +1,51 @@
+﻿@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.h6">@(_isEdit ? "Editar Nota" : "Nova Nota")</MudText>
+
+            <MudTextField Label="Título" @bind-Value="Model.Title" Required="true" Immediate="true" />
+            <MudTextField Label="Conteúdo" @bind-Value="Model.Content" Lines="6" Immediate="true" />
+            <MudSwitch T="bool"
+                       @bind-Checked="Model.IsPinned"
+                       Color="Color.Warning"
+                       Label="Marcado" />
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">Salvar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance Dialog { get; set; } = default!;
+
+    [Parameter] public NoteFormModel Model { get; set; } = new();
+    [Parameter] public bool IsEdit { get; set; }
+
+    private bool _isEdit => IsEdit;
+
+    private void Cancel() => Dialog.Cancel();
+
+    private void Save()
+    {
+        Model.Title = (Model.Title ?? "").Trim();
+        Model.Content = (Model.Content ?? "").Trim();
+
+        if (string.IsNullOrWhiteSpace(Model.Title))
+            return;
+
+        Dialog.Close(DialogResult.Ok(Model));
+    }
+
+    public class NoteFormModel
+    {
+        public Guid? Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Content { get; set; } = "";
+        public bool IsPinned { get; set; }
+    }
+}

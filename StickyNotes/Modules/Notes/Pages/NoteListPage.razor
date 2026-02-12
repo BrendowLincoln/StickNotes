@@ -1,0 +1,179 @@
+﻿@page "/"
+@using MudBlazor
+@using StickyNotes.Modules.Notes.Entities
+@using StickyNotes.Modules.Notes.Components
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject Services.INoteService Notes
+
+<MudPaper Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+        <MudText Typo="Typo.h5">Notas</MudText>
+
+        <MudStack Row="true" Spacing="10">
+            <MudTextField @bind-Value="Search"
+                          Placeholder="Pesquise pelo título"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreate">
+                Nova Nota
+            </MudButton>
+        </MudStack>
+    </MudStack>
+
+    <MudDivider Class="my-4" />
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_filtered.Count == 0)
+    {
+        <MudText Color="Color.Secondary">Sem notas ainda</MudText>
+    }
+    else
+    {
+        @foreach (var note in _filtered)
+        {
+            <NoteCard Note="note"
+                      EditClicked="OpenEdit"
+                      DeleteClicked="ConfirmDelete"
+                      TogglePinClicked="TogglePin" />
+        }
+    }
+</MudPaper>
+
+@code {
+    private bool _loading;
+    private string _search = "";
+    private List<Note> _items = new();
+    private List<Note> _filtered = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        _loading = true;
+        try
+        {
+            _items = (await Notes.GetAllAsync(CancellationToken.None)).ToList();
+            ApplyFilter();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        var s = (_search ?? "").Trim().ToLowerInvariant();
+
+        _filtered = _items
+            .Where(n => string.IsNullOrWhiteSpace(s) || (n.Title?.ToLowerInvariant().Contains(s) ?? false))
+            .OrderByDescending(x => x.IsPinned)
+            .ThenByDescending(x => x.UpdatedAt ?? x.CreatedAt)
+            .ToList();
+    }
+
+    private string Search
+    {
+        get => _search;
+        set { _search = value; ApplyFilter(); }
+    }
+
+    private async Task OpenCreate()
+    {
+        var parameters = new DialogParameters
+        {
+            ["Model"] = new NoteFormDialog.NoteFormModel(),
+            ["IsEdit"] = false
+        };
+
+        var dialog = Dialogs.Show<NoteFormDialog>("", parameters, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is NoteFormDialog.NoteFormModel model)
+        {
+            try
+            {
+                await Notes.CreateAsync(model.Title, model.Content, model.IsPinned, CancellationToken.None);
+                Snackbar.Add("Nota criada.", Severity.Success);
+                await Reload();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+    }
+
+    private async Task OpenEdit(Guid id)
+    {
+        var note = _items.FirstOrDefault(x => x.Id == id);
+        if (note is null) return;
+
+        var parameters = new DialogParameters
+        {
+            ["Model"] = new NoteFormDialog.NoteFormModel
+            {
+                Id = note.Id,
+                Title = note.Title,
+                Content = note.Content,
+                IsPinned = note.IsPinned
+            },
+            ["IsEdit"] = true
+        };
+
+        var dialog = Dialogs.Show<NoteFormDialog>("", parameters, new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true });
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is NoteFormDialog.NoteFormModel model)
+        {
+            try
+            {
+                await Notes.UpdateAsync(model.Id!.Value, model.Title, model.Content, model.IsPinned, CancellationToken.None);
+                Snackbar.Add("Note atualizada.", Severity.Success);
+                await Reload();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add(ex.Message, Severity.Error);
+            }
+        }
+    }
+
+    private async Task ConfirmDelete(Guid id)
+    {
+        var note = _items.FirstOrDefault(x => x.Id == id);
+        if (note is null) return;
+
+        bool? ok = await Dialogs.ShowMessageBox(
+            title: "Remover nota?",
+            message: $"A nota \"{note.Title}\" será deletada.",
+            yesText: "Deletar",
+            cancelText: "Cancelar");
+
+        if (ok == true)
+        {
+            await Notes.DeleteAsync(id, CancellationToken.None);
+            Snackbar.Add("Nota deletada.", Severity.Success);
+            await Reload();
+        }
+    }
+
+    private async Task TogglePin(Guid id)
+    {
+        await Notes.TogglePinAsync(id, CancellationToken.None);
+        await Reload();
+    }
+
+    protected override void OnParametersSet()
+    {
+        ApplyFilter();
+    }
+}

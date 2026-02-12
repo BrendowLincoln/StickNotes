@@ -1,0 +1,50 @@
+﻿@using StickyNotes.Modules.Notes.Entities
+@using MudBlazor
+
+<MudCard Class="mb-3">
+    <MudCardHeader>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width:100%">
+            <MudText Typo="Typo.h6">@Note.Title</MudText>
+
+            <MudStack Row="true" Spacing="1">
+                <MudIconButton Icon="@Icons.Material.Filled.PushPin"
+                               Color="@(Note.IsPinned ? Color.Warning : Color.Default)"
+                               OnClick="OnTogglePin" />
+
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" OnClick="OnEdit" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="OnDelete" />
+            </MudStack>
+        </MudStack>
+    </MudCardHeader>
+
+    <MudCardContent>
+        @if (!string.IsNullOrWhiteSpace(Note.Content))
+        {
+            <MudText Typo="Typo.body2" Style="white-space:pre-wrap">@Note.Content</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary"><em>(empty)</em></MudText>
+        }
+
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Created: @Note.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+            @if (Note.UpdatedAt is not null)
+            {
+                <span> • Updated: @Note.UpdatedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+            }
+        </MudText>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public Note Note { get; set; } = default!;
+    [Parameter] public EventCallback<Guid> EditClicked { get; set; }
+    [Parameter] public EventCallback<Guid> DeleteClicked { get; set; }
+    [Parameter] public EventCallback<Guid> TogglePinClicked { get; set; }
+
+    private Task OnEdit() => EditClicked.InvokeAsync(Note.Id);
+    private Task OnDelete() => DeleteClicked.InvokeAsync(Note.Id);
+    private Task OnTogglePin() => TogglePinClicked.InvokeAsync(Note.Id);
+}
