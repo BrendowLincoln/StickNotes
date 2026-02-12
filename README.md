@@ -1,7 +1,7 @@
 # 📌 Sticky Notes — CRUD Simples com Blazor
 
 ![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)
-![Blazor](https://img.shields.io/badge/Blazor-WebAssembly-blue)
+![Blazor](https://img.shields.io/badge/Blazor-Server-blue)
 ![MudBlazor](https://img.shields.io/badge/MudBlazor-UI-purple)
 ![Entity Framework Core](https://img.shields.io/badge/EF%20Core-ORM-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14-336791)
